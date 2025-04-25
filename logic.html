@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Алгебра логики и Python</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Преобразование операций алгебры логики в Python</h1>
+    
+    <div class="section">
+        <h2>Основные операции</h2>
+        <table>
+            <tr>
+                <th>Логическая операция</th>
+                <th>Обозначение</th>
+                <th>Python операция</th>
+                <th>Пример в Python</th>
+            </tr>
+            <tr>
+                <td>Отрицание (НЕ)</td>
+                <td>¬A, !A</td>
+                <td><code>not</code></td>
+                <td><code>not A</code></td>
+            </tr>
+            <tr>
+                <td>Конъюнкция (И)</td>
+                <td>A ∧ B</td>
+                <td><code>and</code></td>
+                <td><code>A and B</code></td>
+            </tr>
+            <tr>
+                <td>Дизъюнкция (ИЛИ)</td>
+                <td>A ∨ B</td>
+                <td><code>or</code></td>
+                <td><code>A or B</code></td>
+            </tr>
+            <tr>
+                <td>Исключающее ИЛИ (XOR)</td>
+                <td>A ⊕ B</td>
+                <td><code>^</code></td>
+                <td><code>A ^ B</code> (для bool или целых 0,1)</td>
+            </tr>
+            <tr>
+                <td>Импликация</td>
+                <td>A → B</td>
+                <td><code>&lt;=</code> или <code>(not A) or B</code></td>
+                <td><code>A &lt;= B</code> или <code>(not A) or B</code></td>
+            </tr>
+            <tr>
+                <td>Эквивалентность</td>
+                <td>A ↔ B</td>
+                <td><code>==</code></td>
+                <td><code>A == B</code></td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="section">
+        <h2>Законы алгебры логики</h2>
+        
+        <h3>Основные законы</h3>
+        <table>
+            <tr>
+                <th>Название закона</th>
+                <th>Формула</th>
+            </tr>
+            <tr>
+                <td>Закон тождества</td>
+                <td>A = A</td>
+            </tr>
+            <tr>
+                <td>Закон повторения</td>
+                <td>A ∨ A = A <br> A ∧ A = A </td>
+            </tr>
+            <tr>
+                <td>Операции с константой</td>
+                <td>A ∨ 0 = A (ИЛИ, or)<br> A ∨ 1 = 1 (ИЛИ, or)<br>  A ∧ 0 = 0 (И, and)<br> A ∧ 1 = A (И, and)</td>
+            </tr>
+            <tr>
+                <td>Закон исключения третьего</td>
+                <td>A ∨ ¬A = 1 (ИЛИ, or)<br> (A ∧ ¬A = 0 - не классический вариант (И, and))</td>
+            </tr>
+            <tr>
+                <td>Закон противоречия</td>
+                <td>A ∧ ¬A = 0 (И, and)</td>
+            </tr>
+            <tr>
+                <td>Закон двойного отрицания</td>
+                <td>¬(¬A) = A</td>
+            </tr>
+        </table>
+        
+        <h3>Законы де Моргана</h3>
+        <table>
+            <tr>
+                <th>Формула</th>
+                <th>Python эквивалент</th>
+            </tr>
+            <tr>
+                <td>¬(A ∧ B) = ¬A ∨ ¬B</td>
+                <td>
+                    <code>(not A) or (not B)</code> можно заменить на <code>not (A and B)</code>
+                </td>
+            </tr>
+            <tr>
+                <td>¬(A ∨ B) = ¬A ∧ ¬B</td>
+                <td>
+                    <code>(not A) and (not B)</code> можно за менить на <code>not (A or B)</code>
+                </td>
+            </tr>
+        </table>
+        
+        <h3>Другие важные законы</h3>
+        <table>
+            <tr>
+                <th>Название закона</th>
+                <th>Формула</th>
+            </tr>
+            <tr>
+                <td>Коммутативность</td>
+                <td>A ∧ B = B ∧ A <br> A ∨ B = B ∨ A</td>
+            </tr>
+            <tr>
+                <td>Ассоциативность</td>
+                <td>A ∧ (B ∧ C) = (A ∧ B) ∧ C <br> A ∨ (B ∨ C) = (A ∨ B) ∨ C</td>
+            </tr>
+            <tr>
+                <td>Дистрибутивность</td>
+                <td>A ∧ (B ∨ C) = (A ∧ B) ∨ (A ∧ C) <br> A ∨ (B ∧ C) = (A ∨ B) ∧ (A ∨ C)</td>
+            </tr>
+            <tr>
+                <td>Закон поглощения</td>
+                <td>A ∨ (A ∧ B) = A <br> A ∧ (A ∨ B) = A</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="section">
+        <h2>Аксиомы алгебры логики</h2>
+        <table>
+            <tr>
+                <th>Аксиома</th>
+                <th>Пояснение</th>
+            </tr>
+            <tr>
+                <td>0 ∧ 0 = 0</td>
+                <td>Ложь И Ложь = Ложь</td>
+            </tr>
+            <tr>
+                <td>0 ∧ 1 = 0</td>
+                <td>Ложь И Истина = Ложь</td>
+            </tr>
+            <tr>
+                <td>1 ∧ 0 = 0</td>
+                <td>Истина И Ложь = Ложь</td>
+            </tr>
+            <tr>
+                <td>1 ∧ 1 = 1</td>
+                <td>Истина И Истина = Истина</td>
+            </tr>
+            <tr>
+                <td>0 ∨ 0 = 0</td>
+                <td>Ложь ИЛИ Ложь = Ложь</td>
+            </tr>
+            <tr>
+                <td>0 ∨ 1 = 1</td>
+                <td>Ложь ИЛИ Истина = Истина</td>
+            </tr>
+            <tr>
+                <td>1 ∨ 0 = 1</td>
+                <td>Истина ИЛИ Ложь = Истина</td>
+            </tr>
+            <tr>
+                <td>1 ∨ 1 = 1</td>
+                <td>Истина ИЛИ Истина = Истина</td>
+            </tr>
+            <tr>
+                <td>¬0 = 1</td>
+                <td>Отрицание Лжи = Истина</td>
+            </tr>
+            <tr>
+                <td>¬1 = 0</td>
+                <td>Отрицание Истины = Ложь</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="section">
+        <h2>Эквивалентные преобразования</h2>
+        <table>
+            <tr>
+                <th>Исходное выражение</th>
+                <th>Эквивалентное преобразование</th>
+                <th>Python эквивалент</th>
+            </tr>
+            <tr>
+                <td>A → B</td>
+                <td>¬A ∨ B</td>
+                <td><code>(not A) or B</code></td>
+            </tr>
+            <tr>
+                <td>A ↔ B</td>
+                <td>(¬A ∨ B) ∧ (¬B ∨ A)</td>
+                <td><code>((not A) or B) and ((not B) or A)</code></td>
+            </tr>
+            <tr>
+                <td>A ↔ B</td>
+                <td>(A ∧ B) ∨ (¬A ∧ ¬B)</td>
+                <td><code>(A and B) or ((not A) and (not B))</code></td>
+            </tr>
+            <tr>
+                <td>A ⊕ B</td>
+                <td>(A ∨ B) ∧ ¬(A ∧ B)</td>
+                <td><code>(A or B) and not (A and B)</code></td>
+            </tr>
+            <tr>
+                <td>A ⊕ B</td>
+                <td>(A ∧ ¬B) ∨ (¬A ∧ B)</td>
+                <td><code>(A and (not B)) or ((not A) and B)</code></td>
+            </tr>
+            <tr>
+                <td>¬(A → B)</td>
+                <td>A ∧ ¬B</td>
+                <td><code>A and (not B)</code></td>
+            </tr>
+            <tr>
+                <td>¬(A ↔ B)</td>
+                <td>A ⊕ B (XOR)</td>
+                <td><code>A ^ B (для bool или целых 0,1)</code></td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="section">
+        <h2>Примеры сложных выражений</h2>
+        <table>
+            <tr>
+                <th>Логическое выражение</th>
+                <th>Python реализация</th>
+            </tr>
+            <tr>
+                <td>(A ∧ B) ∨ (¬A ∧ C)</td>
+                <td><code>(A and B) or ((not A) and C)</code></td>
+            </tr>
+            <tr>
+                <td>(A → B) ∧ (B → C)</td>
+                <td><code>((not A) or B) and ((not B) or C)</code></td>
+            </tr>
+            <tr>
+                <td>¬(A ∧ B) → (¬A ∨ ¬B)</td>
+                <td><code>(not (A and B)) &lt;= ((not A) or (not B))</code></td>
+            </tr>
+            <tr>
+                <td>(A ↔ B) ↔ (¬A ↔ ¬B)</td>
+                <td><code>(A == B) == ((not A) == (not B))</code></td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>
