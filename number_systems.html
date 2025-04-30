@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Преобразование систем счисления</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        pre {
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .note {
+            background-color: #e7f4ff;
+            padding: 10px;
+            border-left: 4px solid #3498db;
+            margin: 10px 0;
+        }
+        .method {
+            background-color: #f0fff0;
+            padding: 10px;
+            border-left: 4px solid #2ecc71;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Преобразование чисел между системами счисления</h1>
+
+    <h2>Ручные методы преобразования</h2>
+
+    <div class="method">
+        <h3>1. Из десятичной системы в другую (метод деления)</h3>
+        <p><strong>Алгоритм:</strong></p>
+        <ol>
+            <li>Делим число на основание новой системы счисления</li>
+            <li>Записываем остаток от деления (это будет младший разряд)</li>
+            <li>Целое частное снова делим на основание</li>
+            <li>Повторяем процесс, пока частное не станет равным 0</li>
+            <li>Записываем остатки в обратном порядке</li>
+        </ol>
+        
+        <p><strong>Пример:</strong> Перевести 42<sub>10</sub> в двоичную систему</p>
+        <pre>
+42 ÷ 2 = 21 остаток 0 ↑
+21 ÷ 2 = 10 остаток 1 ↑
+10 ÷ 2 = 5  остаток 0 ↑
+5  ÷ 2 = 2  остаток 1 ↑
+2  ÷ 2 = 1  остаток 0 ↑
+1  ÷ 2 = 0  остаток 1 ↑
+Читаем остатки снизу вверх: 101010<sub>2</sub></pre>
+    </div>
+
+    <div class="method">
+        <h3>2. Из другой системы в десятичную (метод разложения)</h3>
+        <p><strong>Алгоритм:</strong></p>
+        <ol>
+            <li>Пронумеруем разряды числа справа налево, начиная с 0</li>
+            <li>Умножим каждую цифру на основание системы в степени её разряда</li>
+            <li>Сложим все полученные значения</li>
+        </ol>
+        
+        <p><strong>Пример:</strong> Перевести 101010<sub>2</sub> в десятичную систему</p>
+        <pre>
+1×2⁵ + 0×2⁴ + 1×2³ + 0×2² + 1×2¹ + 0×2⁰ =
+32 + 0 + 8 + 0 + 2 + 0 = 42<sub>10</sub></pre>
+
+        <p><strong>Ещё пример:</strong> Перевести 2A<sub>16</sub> в десятичную систему</p>
+        <pre>
+2×16¹ + A×16⁰ =
+2×16 + 10×1 = 32 + 10 = 42<sub>10</sub></pre>
+    </div>
+
+    <div class="note">
+        <p><strong>Примечание:</strong> Для систем счисления больше 10 используйте буквы A=10, B=11, ..., Z=35</p>
+    </div>
+
+    <h2>Автоматическое преобразование с помощью Python</h2>
+    
+    <!-- Остальная часть документа остается без изменений -->
+    <h3>1. Из десятичной системы в другую</h3>
+    
+    <h4>Встроенные функции Python:</h4>
+    <ul>
+        <li><code>bin(x)</code> - преобразует число в двоичную строку с префиксом '0b'</li>
+        <li><code>oct(x)</code> - преобразует число в восьмеричную строку с префиксом '0o'</li>
+        <li><code>hex(x)</code> - преобразует число в шестнадцатеричную строку с префиксом '0x'</li>
+    </ul>
+    
+    <h3>Примеры:</h3>
+<pre><code>
+num = 42
+# Преобразование в двоичную систему
+binary = bin(num)  # '0b101010'
+
+# Преобразование в восьмеричную систему
+octal = oct(num)   # '0o52'
+
+# Преобразование в шестнадцатеричную систему
+hexadecimal = hex(num)  # '0x2a'
+
+</code></pre>
+    
+    <h3>Универсальный способ с указанием основания:</h3>
+    <pre><code>
+def decimal_to_base(n, base):
+    if n == 0:
+        return '0'
+    digits = []
+    while n > 0:
+        digits.append(str(n % base))
+        n = n // base
+    return ''.join(reversed(digits))
+
+# Пример использования
+print(decimal_to_base(42, 2))  # '101010'
+print(decimal_to_base(42, 5))  # '132'
+
+</code></pre>
+    
+    <h2>2. Из любой системы в десятичную</h2>
+    
+    <p>Функция <code>int()</code> может преобразовывать строки из любой системы счисления (от 2 до 36) в десятичное число.</p>
+    
+    <h3>Синтаксис:</h3>
+    <pre><code>
+int(x, base=10)
+
+</code></pre>
+    
+    <h3>Примеры:</h3>
+    <pre><code>
+# Из двоичной в десятичную
+print(int('101010', 2))  # 42
+
+# Из восьмеричной в десятичную
+print(int('52', 8))      # 42
+
+# Из шестнадцатеричной в десятичную
+print(int('2a', 16))     # 42
+
+# Из пятеричной в десятичную
+print(int('132', 5))     # 42
+
+</code></pre>
+    
+    <h2>3. Форматирование чисел с ведущими нулями</h2>
+    
+    <p>Используйте f-строки или метод <code>format()</code> для добавления ведущих нулей:</p>
+    
+    <h3>Примеры:</h3>
+<pre><code>
+num = 42
+
+# Двоичное представление с 8 цифрами
+print(f"{num:08b}")  # '00101010'
+
+# Восьмеричное представление с 5 цифрами
+print(f"{num:05o}")  # '00052'
+
+# Шестнадцатеричное представление с 4 цифрами
+print(f"{num:04x}")  # '002a'
+
+# Альтернативный способ с format()
+print(format(num, '08b'))  # '00101010'
+
+</code></pre>
+    
+    <div class="note">
+        <strong>Примечание:</strong> Для систем счисления, отличных от 2, 8, 16, вам нужно будет использовать собственную функцию преобразования, так как встроенные функции Python работают только с этими основаниями.
+    </div>
+    
+    <h2>4. Полный пример преобразования</h2>
+    <pre><code>
+def convert_number(number, from_base, to_base):
+    """
+    Преобразует число между произвольными системами счисления
+    :param number: число для преобразования (строка или целое)
+    :param from_base: исходная система счисления (2-36)
+    :param to_base: целевая система счисления (2-36)
+    :return: строка, представляющая число в новой системе счисления
+    """
+    if isinstance(number, int):
+        num = number
+    else:
+        num = int(str(number), from_base)
+    
+    if to_base == 10:
+        return str(num)
+    # код ниже можно взять отдельно для преобразования из десятичной в любую другую
+    digits = "0123456789abcdefghijklmnopqrstuvwxyz"
+    if num == 0:
+        return '0'
+    
+    result = []
+    while num > 0:
+        result.append(digits[num % to_base])
+        num = num // to_base
+    
+    result = ''.join(reversed(result))
+    return result
+
+# Примеры использования
+print(convert_number('101010', 2, 10))  # '42'
+print(convert_number('42', 10, 2))      # '101010'
+print(convert_number('2a', 16, 8))      # '52'
+print(convert_number('z', 36, 10))      # '35'
+
+</code></pre>
+
+<h2>Кастомные функции преобразования на Python</h2>
+
+<div class="method">
+    <h3>Функция для перевода из любой системы в десятичную</h3>
+    <pre><code>
+def custom_to_decimal(number_str, base):
+    """
+    Переводит число из указанной системы счисления в десятичную
+    :param number_str: строка с числом для преобразования
+    :param base: основание исходной системы счисления (2-36)
+    :return: целое число в десятичной системе
+    """
+    digits = "0123456789abcdefghijklmnopqrstuvwxyz"
+    number_str = number_str.lower().strip()
+    decimal_value = 0
+
+    for i, char in enumerate(reversed(number_str)):
+        if char not in digits:
+            raise ValueError(f"Недопустимый символ '{char}' для системы с основанием {base}")
+        
+        digit_value = digits.index(char)
+        if digit_value >= base:
+            raise ValueError(f"Символ '{char}' недопустим для системы с основанием {base}")
+        
+        decimal_value += digit_value * (base ** i)
+
+    return decimal_value
+
+# Примеры использования
+print(custom_to_decimal("101010", 2))    # 42
+print(custom_to_decimal("2a", 16))       # 42
+print(custom_to_decimal("1120", 3))      # 42
+print(custom_to_decimal("z", 36))        # 35
+print(custom_to_decimal("1a2b", 12))     # 3203
+
+</code></pre>
+</div>
+
+<div class="method">
+    <h3>Полностью кастомная функция для преобразования между любыми системами</h3>
+    <pre><code>
+def convert_base(number, from_base=10, to_base=10):
+    """
+    Универсальный конвертер между системами счисления
+    :param number: число для преобразования (строка или число)
+    :param from_base: исходное основание (2-36)
+    :param to_base: целевое основание (2-36)
+    :return: строка с числом в новой системе счисления
+    """
+    digits = "0123456789abcdefghijklmnopqrstuvwxyz"
+
+    # Если входное число - строка, преобразуем его в десятичное
+    if isinstance(number, str):
+        number = number.lower()
+        decimal = 0
+        for i, char in enumerate(reversed(number)):
+            if char not in digits:
+                raise ValueError(f"Invalid character '{char}' for base {from_base}")
+            digit = digits.index(char)
+            if digit >= from_base:
+                raise ValueError(f"Digit '{char}' invalid for base {from_base}")
+            decimal += digit * (from_base ** i)
+    else:
+        decimal = int(number)
+
+    # Если целевая система - десятичная, возвращаем число
+    if to_base == 10:
+        return str(decimal)
+
+    # Преобразуем десятичное число в целевую систему
+    if decimal == 0:
+        return '0'
+
+    result = []
+    while decimal > 0:
+        result.append(digits[decimal % to_base])
+        decimal = decimal // to_base
+
+    return ''.join(reversed(result))
+
+# Примеры использования
+print(convert_base("101010", 2, 10))     # '42'
+print(convert_base("2a", 16, 8))         # '52'
+print(convert_base("z", 36, 10))         # '35'
+print(convert_base(42, 10, 3))           # '1120'
+print(convert_base("1a2b", 12, 20))      # '803'
+
+</code></pre>
+</div>
+
+<div class="note">
+    <strong>Особенности кастомных функций:</strong>
+    <ul>
+        <li>Поддержка систем счисления от 2 до 36</li>
+        <li>Обработка как строчных, так и заглавных букв (A-Z)</li>
+        <li>Проверка на корректность входных данных</li>
+        <li>Возможность преобразования между любыми системами</li>
+        <li>Подробные сообщения об ошибках</li>
+    </ul>
+</div>
+</body>
+</html>
