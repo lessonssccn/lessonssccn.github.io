@@ -103,7 +103,7 @@ async function startNoiseUI() {
     scheduleAutoTimerFromUI();
   } catch (err) {
     console.error('Error starting noise:', err);
-    setStatus('Ошибка при запуске шума');
+    setStatus('Ошибка при запуске шума ' + JSON.stringify(err));
   }
 }
 
