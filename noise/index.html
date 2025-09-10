@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Шум для сна</title>
+  <style>
+    :root { --bg:#101214; --card:#161a1d; --text:#e6e6e6; --muted:#9aa0a6; --accent:#6aa9ff; }
+    html,body { height:100%; margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 560px; margin: 0 auto; padding: 24px; }
+    .card { background:var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+    h1 { font-size: 20px; margin: 0 0 16px; }
+    .row { display: flex; gap: 12px; align-items: center; margin: 12px 0; }
+    .row > * { flex: 1; }
+    .buttons { display:flex; gap:12px; }
+    button { background:#243041; color:#fff; border:1px solid #2f3f55; border-radius:10px; padding:10px 14px; cursor:pointer; }
+    button.primary { background:var(--accent); color:#081019; border-color:#73b4ff; font-weight:600; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .select { display:flex; gap:8px; }
+    .select button { flex: 1 1 auto; }
+    label { font-size: 13px; color: var(--muted); display:block; margin-bottom:6px; }
+    input[type="range"] { width: 100%; }
+    input[type="number"] { width: 100%; background:#0f141a; color:#fff; border:1px solid #2f3f55; border-radius:8px; padding:8px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .spacer { height: 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" role="region" aria-label="Генератор шума">
+      <h1>Шум для сна</h1>
+
+      <div class="row buttons">
+        <button id="startBtn" class="primary" aria-label="Запустить шум">Старт</button>
+        <button id="stopBtn" aria-label="Остановить шум" disabled>Стоп</button>
+      </div>
+
+      <div class="row" role="group" aria-label="Тип шума">
+        <div class="select">
+          <button id="typeWhite" aria-pressed="true" data-type="white">Белый</button>
+          <button id="typePink" aria-pressed="false" data-type="pink">Розовый</button>
+          <button id="typeBrown" aria-pressed="false" data-type="brown">Коричневый</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="volumeSlider">Громкость</label>
+          <input id="volumeSlider" type="range" min="0" max="1" step="0.005" value="0.04" aria-label="Громкость" />
+          <div class="muted">Рекомендуется 0.03–0.06</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="timerMinutes">Автотаймер (мин)</label>
+          <input id="timerMinutes" type="number" min="0" step="5" value="30" aria-label="Автотаймер минут" />
+          <div class="muted">0 — без таймера</div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="muted" id="status">Статус: остановлен</div>
+    </div>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
