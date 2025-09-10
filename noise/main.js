@@ -60,7 +60,7 @@ async function ensureContext() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     try {
-      await audioCtx.audioWorklet.addModule('./white-pink-brown-processor.js');
+      await audioCtx.audioWorklet.addModule('./white-pink-brown-processor.js?v=1.1');
     } catch (err) {
       console.error('Failed to load audio worklet module:', err);
       setStatus('Ошибка: не удалось загрузить модуль шума');
