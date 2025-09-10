@@ -34,7 +34,12 @@ function wakeUpAudio() {
 
   if (audioCtx.state === 'suspended') {
     audioCtx.resume()
-      .then(() => console.log('✅ AudioContext: пробуждён'))
+      .then(() => {
+        const gain = audioCtx.createGain();
+        gain.connect(audioCtx.destination);
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        console.log('✅ AudioContext: пробуждён');
+      })
       .catch(err => console.error('❌ AudioContext: не удалось возобновить', err));
   }
 }
