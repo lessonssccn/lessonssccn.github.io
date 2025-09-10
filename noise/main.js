@@ -1,8 +1,10 @@
-let audioCtx;
-let gainNode;
-let noiseNode;
+// === Глобальные переменные ===
+let audioCtx = null;
+let gainNode = null;
+let noiseNode = null;
 let stopTimerId = null;
 let currentTypeKey = 'white';
+let audioInitialized = false;
 
 const NoiseType = { white: 0, pink: 1, brown: 2 };
 
@@ -14,62 +16,9 @@ const typeButtons = [$('#typeWhite'), $('#typePink'), $('#typeBrown')];
 const volumeSlider = $('#volumeSlider');
 const timerMinutes = $('#timerMinutes');
 const statusEl = $('#status');
+const volumeValue = $('#volumeValue');
 
-// === ФЛАГ: аудио уже инициализировано
-let audioInitialized = false;
-
-// === ИНИЦИАЛИЗАЦИЯ ПРИ ПЕРВОМ КЛИКЕ/КАСАНИИ ===
-
-function initAudio() {
-  // Удаляем обработчики
-  document.body.removeEventListener('click', initAudio);
-  document.body.removeEventListener('touchstart', initAudio);
-
-  // Создаём AudioContext
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-  // Проверяем состояние
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume(); // ✅ Синхронный вызов — сохраняет user gesture
-  }
-
-  console.log('✅ AudioContext: создан и возобновлён');
-
-  // Теперь можно безопасно загружать worklet и создавать узлы
-  audioCtx.audioWorklet.addModule('./white-pink-brown-processor.js?v=1.9')
-    .then(() => {
-      console.log('✅ Worklet загружен');
-
-      // Создаём узлы
-      gainNode = new GainNode(audioCtx, { gain: 0 });
-      gainNode.connect(audioCtx.destination);
-
-      noiseNode = new AudioWorkletNode(audioCtx, 'noise-processor', {
-        numberOfInputs: 0,
-        numberOfOutputs: 1,
-        outputChannelCount: [2],
-      });
-
-      // Устанавливаем тип
-      const now = audioCtx.currentTime;
-      noiseNode.parameters.get('type')?.setValueAtTime(NoiseType[currentTypeKey], now);
-
-      console.log('✅ Аудиограф инициализирован');
-      audioInitialized = true;
-      setStatus('готов (нажмите Старт)');
-    })
-    .catch(err => {
-      console.error('❌ Ошибка загрузки worklet:', err);
-      setStatus('Ошибка: не удалось загрузить шум');
-    });
-}
-
-// Назначаем обработчики (без async!)
-document.body.addEventListener('touchstart', initAudio, { once: true, passive: false });
-document.body.addEventListener('click', initAudio, { once: true });
-
-// === УТИЛИТЫ ===
-
+// === Утилиты ===
 function setStatus(text) {
   statusEl.textContent = `Статус: ${text}`;
 }
@@ -82,36 +31,72 @@ function updateTypeButtons(activeKey) {
   }
 }
 
-// === УПРАВЛЕНИЕ ШУМОМ ===
-
-function startNoiseUI() {
-  if (!audioInitialized || !noiseNode || !gainNode) {
-    setStatus('Ошибка: аудио не инициализировано');
-    return;
-  }
+// === ИНИЦИАЛИЗАЦИЯ АУДИО ПРИ ПЕРВОМ КЛИКЕ НА СТАРТ ===
+async function initAudio() {
+  // Создаём контекст — СИНХРОННО в обработчике клика
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
   try {
-    noiseNode.disconnect();
+    // Возобновляем (на случай, если был suspended)
+    await audioCtx.resume();
+    console.log('✅ AudioContext запущен');
+
+    // Загружаем worklet
+    await audioCtx.audioWorklet.addModule('./white-pink-brown-processor.js?v=1.9');
+
+    // Создаём узлы
+    gainNode = new GainNode(audioCtx, { gain: 0 });
+    gainNode.connect(audioCtx.destination);
+
+    noiseNode = new AudioWorkletNode(audioCtx, 'noise-processor', {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+    });
     noiseNode.connect(gainNode);
 
-    const vol = Math.max(0, Math.min(1, parseFloat(volumeSlider.value) || 0.04));
+    // Устанавливаем тип
     const now = audioCtx.currentTime;
-    gainNode.gain.cancelScheduledValues(now);
-    gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(vol, now + 0.3);
+    const param = noiseNode.parameters.get('type');
+    if (param) param.setValueAtTime(NoiseType[currentTypeKey], now);
 
-    const typeValue = NoiseType[currentTypeKey] ?? 0;
-    noiseNode.parameters.get('type')?.setValueAtTime(typeValue, now);
-
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-    setStatus(`играет (${currentTypeKey}), громк. ${vol.toFixed(3)}`);
-
-    scheduleAutoTimerFromUI();
+    audioInitialized = true;
+    console.log('✅ Аудио инициализировано');
+    setStatus(`готов, тип: ${currentTypeKey}`);
   } catch (err) {
-    console.error('❌ Ошибка при запуске шума:', err);
-    setStatus('Ошибка при запуске');
+    console.error('❌ Ошибка инициализации аудио:', err);
+    setStatus('Ошибка: ' + err.message);
+    audioInitialized = false;
+    audioCtx = null;
   }
+}
+
+// === УПРАВЛЕНИЕ ШУМОМ ===
+async function startNoiseUI() {
+  if (!audioInitialized) {
+    await initAudio();
+    if (!audioInitialized) return; // ошибка
+  }
+
+  if (audioCtx.state === 'suspended') {
+    await audioCtx.resume();
+  }
+
+  const now = audioCtx.currentTime;
+  const vol = Math.max(0, Math.min(1, +volumeSlider.value));
+
+  gainNode.gain.cancelScheduledValues(now);
+  gainNode.gain.setValueAtTime(0, now);
+  gainNode.gain.linearRampToValueAtTime(vol, now + 0.3);
+
+  const typeValue = NoiseType[currentTypeKey];
+  const param = noiseNode.parameters.get('type');
+  if (param) param.setValueAtTime(typeValue, now);
+
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+  setStatus(`играет (${currentTypeKey}), громк. ${(vol * 100).toFixed(1)}%`);
+  scheduleAutoTimerFromUI();
 }
 
 function stopNoiseUI({ ramp = 0.3 } = {}) {
@@ -127,7 +112,7 @@ function stopNoiseUI({ ramp = 0.3 } = {}) {
   gainNode.gain.linearRampToValueAtTime(0, now + ramp);
 
   setTimeout(() => {
-    try { noiseNode?.disconnect(); } catch {}
+    try { noiseNode?.disconnect(); } catch { }
     startBtn.disabled = false;
     stopBtn.disabled = true;
     setStatus('остановлен');
@@ -138,29 +123,29 @@ function setTypeUI(key) {
   currentTypeKey = key;
   updateTypeButtons(key);
 
-  if (noiseNode && audioCtx) {
-    const typeValue = NoiseType[key] ?? 0;
+  if (audioInitialized && noiseNode && audioCtx) {
     const now = audioCtx.currentTime;
-    noiseNode.parameters.get('type')?.setValueAtTime(typeValue, now);
-    noiseNode.port.postMessage({ type: typeValue });
+    const param = noiseNode.parameters.get('type');
+    if (param) param.setValueAtTime(NoiseType[key], now);
 
-    const vol = gainNode?.gain.value ?? 0;
-    setStatus(`играет (${key}), громк. ${vol.toFixed(3)}`);
+    const vol = gainNode.gain.value;
+    setStatus(`играет (${key}), громк. ${(vol * 100).toFixed(1)}%`);
   }
 }
 
 function setVolumeUI(value) {
-  if (!gainNode || !audioCtx) return;
+  const vol = Math.max(0, Math.min(1, +value));
+  volumeValue.textContent = `${(vol * 100).toFixed(1)}%`;
 
-  const vol = Math.max(0, Math.min(1, Number(value) || 0));
-  const now = audioCtx.currentTime;
+  if (audioInitialized && gainNode && audioCtx) {
+    const now = audioCtx.currentTime;
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+    gainNode.gain.linearRampToValueAtTime(vol, now + 0.08);
 
-  gainNode.gain.cancelScheduledValues(now);
-  gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-  gainNode.gain.linearRampToValueAtTime(vol, now + 0.08);
-
-  if (noiseNode) {
-    setStatus(`играет (${currentTypeKey}), громк. ${vol.toFixed(3)}`);
+    if (noiseNode) {
+      setStatus(`играет (${currentTypeKey}), громк. ${(vol * 100).toFixed(1)}%`);
+    }
   }
 }
 
@@ -173,7 +158,7 @@ function clearAutoTimer() {
 
 function scheduleAutoTimerFromUI() {
   clearAutoTimer();
-  const mins = Math.max(0, Number(timerMinutes.value) || 0);
+  const mins = Math.max(0, +timerMinutes.value);
   if (mins > 0) {
     stopTimerId = setTimeout(() => stopNoiseUI({ ramp: 0.4 }), mins * 60 * 1000);
     statusEl.textContent += ` • авто-стоп через ${mins} мин`;
@@ -181,23 +166,23 @@ function scheduleAutoTimerFromUI() {
 }
 
 // === ОБРАБОТЧИКИ UI ===
-
 startBtn.addEventListener('click', startNoiseUI);
 stopBtn.addEventListener('click', () => stopNoiseUI({ ramp: 0.3 }));
 
-for (const btn of typeButtons) {
+typeButtons.forEach(btn => {
   btn.addEventListener('click', () => setTypeUI(btn.dataset.type));
-}
+});
 
 volumeSlider.addEventListener('input', (e) => setVolumeUI(e.target.value));
 timerMinutes.addEventListener('change', () => {
-  if (noiseNode) scheduleAutoTimerFromUI();
+  if (audioInitialized) scheduleAutoTimerFromUI();
 });
 
-// === ИНИЦИАЛИЗАЦИЯ ===
-updateTypeButtons(currentTypeKey);
-setStatus('готов (коснитесь экрана)');
-
+// === ОЧИСТКА ПРИ ЗАКРЫТИИ ===
 window.addEventListener('beforeunload', () => {
   if (noiseNode) stopNoiseUI({ ramp: 0 });
 });
+
+// === ИНИЦИАЛИЗАЦИЯ UI ===
+updateTypeButtons(currentTypeKey);
+setStatus('готов — нажмите Старт');
