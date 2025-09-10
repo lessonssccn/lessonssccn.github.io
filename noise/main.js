@@ -6,7 +6,10 @@ let currentTypeKey = 'white';
 
 const NoiseType = { white: 0, pink: 1, brown: 2 };
 
+// Утилита поиска элементов
 const $ = (sel) => document.querySelector(sel);
+
+// DOM-элементы
 const startBtn = $('#startBtn');
 const stopBtn = $('#stopBtn');
 const typeButtons = [$('#typeWhite'), $('#typePink'), $('#typeBrown')];
@@ -14,13 +17,30 @@ const volumeSlider = $('#volumeSlider');
 const timerMinutes = $('#timerMinutes');
 const statusEl = $('#status');
 
-async function ensureContext() {
+// === ИНИЦИАЛИЗАЦИЯ АУДИО (только после взаимодействия) ===
+
+/**
+ * Пробуждает AudioContext при первом касании/клике
+ */
+function wakeUpAudio() {
+  // Удаляем обработчики, чтобы не срабатывали повторно
+  document.body.removeEventListener('click', wakeUpAudio);
+  document.body.removeEventListener('touchstart', wakeUpAudio);
+
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    await audioCtx.audioWorklet.addModule('./white-pink-brown-processor.js');
   }
-  if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
 }
+
+// Назначаем пробуждение при первом касании или клике
+document.body.addEventListener('click', wakeUpAudio, { once: true });
+document.body.addEventListener('touchstart', wakeUpAudio, { once: true });
+
+// === УТИЛИТЫ ===
 
 function setStatus(text) {
   statusEl.textContent = `Статус: ${text}`;
@@ -34,33 +54,57 @@ function updateTypeButtons(activeKey) {
   }
 }
 
+// === УПРАВЛЕНИЕ ШУМОМ ===
+
+async function ensureContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    try {
+      await audioCtx.audioWorklet.addModule('./white-pink-brown-processor.js');
+    } catch (err) {
+      console.error('Failed to load audio worklet module:', err);
+      setStatus('Ошибка: не удалось загрузить модуль шума');
+      throw err;
+    }
+  }
+
+  if (audioCtx.state === 'suspended') {
+    await audioCtx.resume(); // Разрешается только после user gesture
+  }
+}
+
 async function startNoiseUI() {
-  await ensureContext();
+  try {
+    await ensureContext();
 
-  // Узлы
-  gainNode = new GainNode(audioCtx);
-  gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-  gainNode.connect(audioCtx.destination);
+    // Создаём узлы
+    gainNode = new GainNode(audioCtx, { gain: 0 });
+    gainNode.connect(audioCtx.destination);
 
-  noiseNode = new AudioWorkletNode(audioCtx, 'noise-processor', {
-    numberOfInputs: 0,
-    numberOfOutputs: 1,
-    outputChannelCount: [22],
-    parameterData: { type: NoiseType[currentTypeKey] ?? 0 },
-  });
-  noiseNode.connect(gainNode);
+    noiseNode = new AudioWorkletNode(audioCtx, 'noise-processor', {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [2], // Исправлено: было [22]
+      parameterData: { type: NoiseType[currentTypeKey] ?? 0 },
+    });
+    noiseNode.connect(gainNode);
 
-  // Плавный старт
-  const vol = parseFloat(volumeSlider.value) || 0.04;
-  gainNode.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.3);
+    // Плавное включение громкости
+    const vol = Math.max(0, Math.min(1, parseFloat(volumeSlider.value) || 0.04));
+    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.3);
 
-  // Кнопки
-  startBtn.disabled = true;
-  stopBtn.disabled = false;
-  setStatus(`играет (${currentTypeKey}), громк. ${vol.toFixed(3)}`);
+    // Обновляем интерфейс
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    setStatus(`играет (${currentTypeKey}), громк. ${vol.toFixed(3)}`);
 
-  // Таймер
-  scheduleAutoTimerFromUI();
+    // Запускаем таймер
+    scheduleAutoTimerFromUI();
+  } catch (err) {
+    console.error('Error starting noise:', err);
+    setStatus('Ошибка при запуске шума');
+  }
 }
 
 async function stopNoiseUI({ ramp = 0.3 } = {}) {
@@ -69,43 +113,62 @@ async function stopNoiseUI({ ramp = 0.3 } = {}) {
   clearAutoTimer();
 
   const now = audioCtx.currentTime;
-  const cur = gainNode.gain.value;
+  const currentGain = gainNode.gain.value;
+
+  // Плавное выключение
   gainNode.gain.cancelScheduledValues(now);
-  gainNode.gain.setValueAtTime(cur, now);
+  gainNode.gain.setValueAtTime(currentGain, now);
   gainNode.gain.linearRampToValueAtTime(0, now + ramp);
 
+  // Отключаем узлы после окончания фейда
   setTimeout(() => {
-    try { noiseNode.disconnect(); } catch {}
-    try { gainNode.disconnect(); } catch {}
+    try {
+      if (noiseNode) noiseNode.disconnect();
+    } catch (e) {}
+    try {
+      if (gainNode) gainNode.disconnect();
+    } catch (e) {}
     noiseNode = null;
     gainNode = null;
+
     startBtn.disabled = false;
     stopBtn.disabled = true;
     setStatus('остановлен');
-  }, ramp * 1000 + 25);
+  }, ramp * 1000 + 50);
 }
 
 function setTypeUI(key) {
   currentTypeKey = key;
   updateTypeButtons(key);
-  if (noiseNode) {
-    const t = NoiseType[key] ?? 0;
+
+  if (noiseNode && audioCtx) {
+    const typeValue = NoiseType[key] ?? 0;
     const now = audioCtx.currentTime;
     const param = noiseNode.parameters.get('type');
-    if (param) param.setValueAtTime(t, now + 0.01);
-    noiseNode.port.postMessage({ type: t });
-    setStatus(`играет (${key}), громк. ${(gainNode?.gain.value ?? 0).toFixed(3)}`);
+
+    if (param) {
+      param.setValueAtTime(typeValue, now + 0.01);
+    }
+    noiseNode.port.postMessage({ type: typeValue });
+
+    const vol = gainNode?.gain.value ?? 0;
+    setStatus(`играет (${key}), громк. ${vol.toFixed(3)}`);
   }
 }
 
 function setVolumeUI(value) {
   if (!gainNode || !audioCtx) return;
+
   const vol = Math.max(0, Math.min(1, Number(value) || 0));
   const now = audioCtx.currentTime;
-  // Избегаем щелчков — короткая линейная огибающая
+
   gainNode.gain.cancelScheduledValues(now);
+  gainNode.gain.setValueAtTime(gainNode.gain.value, now);
   gainNode.gain.linearRampToValueAtTime(vol, now + 0.08);
-  setStatus(`играет (${currentTypeKey}), громк. ${vol.toFixed(3)}`);
+
+  if (noiseNode) {
+    setStatus(`играет (${currentTypeKey}), громк. ${vol.toFixed(3)}`);
+  }
 }
 
 function clearAutoTimer() {
@@ -124,16 +187,26 @@ function scheduleAutoTimerFromUI() {
   }
 }
 
-/* wire UI */
+// === ОБРАБОТЧИКИ UI ===
+
 startBtn.addEventListener('click', startNoiseUI);
 stopBtn.addEventListener('click', () => stopNoiseUI({ ramp: 0.3 }));
+
 for (const btn of typeButtons) {
   btn.addEventListener('click', () => setTypeUI(btn.dataset.type));
 }
+
 volumeSlider.addEventListener('input', (e) => setVolumeUI(e.target.value));
+
 timerMinutes.addEventListener('change', () => {
   if (noiseNode) scheduleAutoTimerFromUI();
 });
 
+// === ИНИЦИАЛИЗАЦИЯ ИНТЕРФЕЙСА ===
 updateTypeButtons(currentTypeKey);
 setStatus('остановлен');
+
+// Отключаем таймер при уходе со страницы
+window.addEventListener('beforeunload', () => {
+  if (noiseNode) stopNoiseUI({ ramp: 0 });
+});
