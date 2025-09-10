@@ -59,17 +59,46 @@ function updateTypeButtons(activeKey) {
 async function ensureContext() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    console.log('✅ AudioContext created');
+  }
+
+  if (audioCtx.state === 'suspended') {
+    await audioCtx.resume();
+    console.log('✅ AudioContext resumed');
+  }
+
+  // Проверяем, зарегистрирован ли процессор
+  if (!globalThis._workletLoaded) {
+    const url = './white-pink-brown-processor.js?v=1.6'; // Обнови версию!
+    console.log('⏳ Loading worklet module:', url);
+
     try {
-      await audioCtx.audioWorklet.addModule('./white-pink-brown-processor.js?v=1.1');
+      await audioCtx.audioWorklet.addModule(url);
+      globalThis._workletLoaded = true;
+      console.log('✅ Worklet module loaded');
     } catch (err) {
-      console.error('Failed to load audio worklet module:', err);
+      console.error('❌ Failed to load worklet:', err);
       setStatus('Ошибка: не удалось загрузить модуль шума');
       throw err;
     }
   }
 
-  if (audioCtx.state === 'suspended') {
-    await audioCtx.resume(); // Разрешается только после user gesture
+  // 🔁 Дополнительная гарантия: попробуем создать временный узел (без подключения)
+  // Это вызовет ошибку, если процессор не готов
+  try {
+    const testNode = new AudioWorkletNode(audioCtx, 'noise-processor', {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [2]
+    });
+    testNode.disconnect(); // не подключаем
+    testNode.port.postMessage({ ping: 'ready' }); // проверим, что порт жив
+    console.log('✅ noise-processor проверен и готов');
+  } catch (err) {
+    console.error('❌ noise-processor not ready:', err);
+    // Если ошибка — сбросим флаг и перезагрузим
+    globalThis._workletLoaded = false;
+    throw new Error('Worklet not ready, retrying...');
   }
 }
 
